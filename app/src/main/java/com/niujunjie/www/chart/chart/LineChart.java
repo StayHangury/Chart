@@ -1,13 +1,16 @@
 package com.niujunjie.www.chart.chart;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Path;
+import android.graphics.RectF;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.ViewConfiguration;
+import android.view.animation.OvershootInterpolator;
 import android.widget.Scroller;
 
 import java.util.ArrayList;
@@ -53,11 +56,16 @@ public class LineChart extends BaseChart {
 
     private Scroller scroller;
 
-
     private int start = 0;
     private int end = 0;
     protected Map<Integer, List<LineData>> mChartDatas = new HashMap<>();
-    private int mWidth;
+    /**
+     * 被选中的数据集合
+     */
+    protected Map<Integer, LineData> selectData;
+
+    private RectF selectReact;
+
 
     public LineChart(Context context) {
         super(context);
@@ -75,10 +83,14 @@ public class LineChart extends BaseChart {
         maxVelocity = ViewConfiguration.get(getContext()).getScaledMaximumFlingVelocity();
     }
 
-    @Override
-    public void setData() {
-        super.setData();
-        invalidate();
+
+    private void initSelectData() {
+        if (selectData == null) {
+            selectData = new HashMap<>(16);
+            for (int i = 0; i < mChartDatas.size(); i++) {
+                selectData.put(i, mChartDatas.get(i).get(0));
+            }
+        }
     }
 
 
@@ -90,6 +102,8 @@ public class LineChart extends BaseChart {
     }
 
     public void cacLineData(int start, int end) {
+        end = end > mXAxis.getLabels().size() ? mXAxis.getLabels().size() : end;
+
         mXAxis.calcValues(mChartArea, start, end);
 
         /**
@@ -126,6 +140,7 @@ public class LineChart extends BaseChart {
                 float x = mXAxis.getValues().get(j - start);
                 float y = 0;
 
+
                 if (mYAxis.isNormal()) {
                     float rate = currnetValue / params.getYMaxValue();
                     y = mYAxis.getStartY() - mYAxis.getHeight() * rate;
@@ -144,32 +159,74 @@ public class LineChart extends BaseChart {
                 }
 
                 lineData.setXY(x, y);
+                lineData.setLineNum(i);
+                lineData.setPosition(j);
                 lineDatas.add(lineData);
             }
             if (start != end) {
                 mChartDatas.put(i, lineDatas);
             }
         }
+        initSelectData();
     }
 
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
         for (int i = 0; i < mChartDatas.size(); i++) {
-            drawSmoothLine(canvas, mChartDatas.get(i),i);
+            drawSmoothLine(canvas, mChartDatas.get(i), i);
             drawDot(canvas, mChartDatas.get(i), i);
         }
+
+        if (selectData.size() == mChartDatas.size()) {
+            drawSelecrDot(canvas);
+            if(params.isShowPop()){
+                drawPop(canvas);
+            }
+        }
+
+        /**
+         * 在此绘制y轴数据避免显示被遮挡
+         */
+        drawXValue(canvas, selectData);
+        drawYValue(canvas);
+
+
+
+    }
+
+    private void drawPop(Canvas canvas) {
+
     }
 
     private void drawDot(Canvas canvas, List<LineData> lineData, int lineNum) {
         for (LineData data : lineData) {
             float x = data.getX();
             float y = data.getY();
-            canvas.drawCircle(x - offset, y, ChartUtils.dip2px(getContext(), 5), params.getBigCirPaint());
-            canvas.drawCircle(x - offset, y, ChartUtils.dip2px(getContext(), 3), params.getSmallCirPaint(lineNum));
+
+            float bigRadius = ChartUtils.dip2px(getContext(), 5);
+            float smallRadius = ChartUtils.dip2px(getContext(), 3);
+            canvas.drawCircle(x - offset, y, bigRadius, params.getBigCirPaint());
+            canvas.drawCircle(x - offset, y, smallRadius, params.getSmallCirPaint(lineNum));
         }
     }
+
+
+    private void drawSelecrDot(Canvas canvas) {
+        float bigRadius = ChartUtils.dip2px(getContext(), 6);
+        float smallRadius = ChartUtils.dip2px(getContext(), 4);
+
+        for (int m = 0; m < selectData.size(); m++) {
+            //选中的点放大
+            float x = selectData.get(m).getX();
+            float y = selectData.get(m).getY();
+            canvas.drawCircle(x - offset, y, bigRadius * mClickValue, params.getBigCirPaint());
+            canvas.drawCircle(x - offset, y, smallRadius * mClickValue, params.getSmallCirPaint(m));
+        }
+    }
+
 
     private void drawSmoothLine(Canvas canvas, List<LineData> lineData, int lineNum) {
         LineData startp;
@@ -187,6 +244,7 @@ public class LineChart extends BaseChart {
         }
     }
 
+    long downTime;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -197,6 +255,9 @@ public class LineChart extends BaseChart {
                 initOrResetVelocityTracker();
                 scroller.abortAnimation();
                 velocityTracker.addMovement(event);
+
+                downTime = System.currentTimeMillis();
+
                 super.onTouchEvent(event);
                 return true;
             case MotionEvent.ACTION_POINTER_DOWN:
@@ -204,16 +265,20 @@ public class LineChart extends BaseChart {
                 break;
             case MotionEvent.ACTION_MOVE:
                 orientationX = lastX - event.getX();
+                /**
+                 * 处理滑动和点击问题
+                 * 手指移动距离小于10视为点击效果
+                 */
                 if (Math.abs(orientationX) < 10f) {
                     break;
                 }
-
                 onScroll(orientationX);
                 lastX = event.getX();
                 velocityTracker.addMovement(event);
-
                 break;
             case MotionEvent.ACTION_POINTER_UP:
+
+
                 int minID = event.getPointerId(0);
                 for (int i = 0; i < event.getPointerCount(); i++) {
                     if (event.getPointerId(i) <= minID) {
@@ -224,15 +289,26 @@ public class LineChart extends BaseChart {
                     minID = event.getPointerId(event.getActionIndex() + 1);
                 }
                 lastX = event.getX(event.findPointerIndex(minID));
-                break;
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:
                 velocityTracker.addMovement(event);
                 velocityTracker.computeCurrentVelocity(1500, maxVelocity);
                 int initialVelocity = (int) velocityTracker.getXVelocity();
                 velocityTracker.clear();
-                if (initialVelocity == 0) {
-                    //选中处理
+
+                if (System.currentTimeMillis() - downTime < 1000) {
+                    if (initialVelocity == 0) {
+                        /**
+                         * 找到被点击的点
+                         */
+                        findSelectPoint(event.getX(), event.getY());
+
+                        //选中处理
+                        if (selectData != null) {
+                            clickAnimation(500);
+                        }
+                    }
+
                 }
                 if (!isArriveAtLeftEdge() && !isArriveAtRightEdge()) {
                     scroller.fling((int) event.getX(), (int) event.getY(), -initialVelocity / 2,
@@ -281,7 +357,6 @@ public class LineChart extends BaseChart {
      * @param deltaX
      */
     int changeValue = 0;
-    int lastChaveValue = -1;
 
     private boolean isMoveToLeft = false;
 
@@ -300,14 +375,18 @@ public class LineChart extends BaseChart {
 
         int st = start + changeValue - 1;
         st = st < 0 ? 0 : st;
-        cacLineData(st, end + changeValue);
+
 
         //图表停止滑动
         if (Math.abs(deltaX) == 1 || deltaX == 0) {
             isStopScroll = true;
         }
         mXAxis.setOffset(offset);
-        invalidate();
+
+        if (!isArriveAtLeftEdge() && !isArriveAtRightEdge()) {
+            cacLineData(st, end + changeValue);
+            invalidate();
+        }
     }
 
     private void initOrResetVelocityTracker() {
@@ -316,5 +395,54 @@ public class LineChart extends BaseChart {
         } else {
             velocityTracker.clear();
         }
+    }
+
+    private void findSelectPoint(float x, float y) {
+        selectData.clear();
+        if (mChartDatas.isEmpty()) {
+            return;
+        }
+        float width = mXAxis.getSpace();
+        selectReact = new RectF();
+        for (int i = 0; i < mChartDatas.size(); i++) {
+            List<LineData> data = mChartDatas.get(i);
+            for (int j = 0; j < data.size(); j++) {
+                LineData chartData = data.get(j);
+                float pointX = chartData.getX() - offset;
+                //这个区域可点击
+                selectReact.bottom = mXArea.bottom;
+                selectReact.top = mChartArea.top;
+                selectReact.left = (float) (pointX - width / 2f);
+                selectReact.right = (float) (pointX + width / 2f);
+
+                if (selectReact.contains(x, y)) {
+                    chartData.setSelect(true);
+                    selectData.put(i, chartData);
+                } else {
+                    chartData.setSelect(false);
+                }
+
+            }
+        }
+    }
+
+    float mClickValue = 1.0f;
+
+    public void clickAnimation(long duration) {
+        ValueAnimator anim = null;
+        if (anim == null) {
+            anim = ValueAnimator.ofFloat(0.7f, 1.0f);
+            anim.setInterpolator(new OvershootInterpolator());
+            anim.setDuration(duration);
+        }
+        anim.cancel();
+        anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                mClickValue = (float) animation.getAnimatedValue();
+                postInvalidate();
+            }
+        });
+        anim.start();
     }
 }

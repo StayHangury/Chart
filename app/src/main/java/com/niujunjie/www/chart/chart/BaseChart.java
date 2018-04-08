@@ -12,6 +12,7 @@ import android.util.AttributeSet;
 import android.view.View;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author: niujunjie
@@ -106,7 +107,7 @@ public class BaseChart extends View {
 
     private void calcChartArea() {
         if (mYAxis.getMaxValue() != 0) {
-            mYWidth = (int) ChartUtils.getValueWidth(mYAxis.getPaint(), mYAxis.getMaxValue() + "");
+            mYWidth = (int) ChartUtils.getValueWidth(mYAxis.getPaint(), mYAxis.getMaxValue() + "") + mYAxis.getPadding() * 2;
         } else {
             mYWidth = ChartUtils.dip2px(getContext(), 40);
         }
@@ -160,14 +161,15 @@ public class BaseChart extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (true) {
+        if (ChartUtils.isDebug) {
             test(canvas);
         }
         //canvas.clipRect(mValidArea);
         drawLeftValue(canvas);
         drawRightValue(canvas);
-        drawXValue(canvas);
-        drawYValue(canvas);
+        //drawXValue(canvas);
+        drawBgLine(canvas);
+        //drawYValue(canvas);
     }
 
     private void drawRightValue(Canvas canvas) {
@@ -238,23 +240,37 @@ public class BaseChart extends View {
 
     private Paint linPaint;
 
-    private void drawXValue(Canvas canvas) {
-        linPaint = ChartUtils.initPaint(new Paint());
-        linPaint.setColor(Color.parseColor("#e8e8e8"));
-        linPaint.setStrokeWidth(ChartUtils.dip2px(getContext(), 2));
-
-        List<Float> values = mXAxis.getValues();
+    protected void drawXValue(Canvas canvas, Map selectData) {
         List<String> lables = mXAxis.getLabels();
         float y = mXArea.top + mXArea.height() / 2 + ChartUtils.getTextHeight(mXAxis.getPaint()) / 2;
-        for (int i = 0; i < values.size(); i++) {
+        for (int i = mXAxis.getStart(); i < mXAxis.getEnd(); i++) {
+
             String lable;
+
             if (lables.size() > 0) {
                 lable = lables.get(i);
             } else {
                 lable = i + "";
             }
-            canvas.drawText(lable, mXAxis.getValues().get(i) - mXAxis.getOffset(), y, mXAxis.getPaint());
 
+            TextPaint textPaint = mXAxis.getPaint();
+            if (selectData.size() > 0) {
+                LineData data = (LineData) selectData.get(0);
+                if (data.getPosition() == i) {
+                    textPaint.setColor(Color.parseColor("#535353"));
+                } else {
+                    textPaint.setColor(Color.parseColor("#9e9e9e"));
+                }
+            }
+            canvas.drawText(lable, mXAxis.getValues().get(i - mXAxis.getStart()) - mXAxis.getOffset(), y, textPaint);
+        }
+    }
+
+    private void drawBgLine(Canvas canvas) {
+        linPaint = ChartUtils.initPaint(new Paint());
+        linPaint.setColor(Color.parseColor("#e8e8e8"));
+        linPaint.setStrokeWidth(ChartUtils.dip2px(getContext(), 2));
+        for (int i = mXAxis.getStart(); i < mXAxis.getEnd(); i++) {
             /**
              * 使用lineValue的原因和局部刷新有关
              * 保证背景线不随线段移动
@@ -266,10 +282,10 @@ public class BaseChart extends View {
         }
     }
 
-    private void drawYValue(Canvas canvas) {
+    protected void drawYValue(Canvas canvas) {
         List<Float> values = mYAxis.getValues();
         List<String> lables = mYAxis.getLabels();
-        float x = mYArea.left;
+        float x = mYArea.left + mYAxis.getPadding();
         for (int i = 0; i < values.size(); i++) {
             String lable;
             if (lables.size() > 0) {

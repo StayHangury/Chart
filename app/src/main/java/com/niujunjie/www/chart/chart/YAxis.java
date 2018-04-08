@@ -76,6 +76,12 @@ public class YAxis {
      */
     private float startY;
 
+
+    /**
+     * y轴数据距离y周区域两边的距离
+     */
+    private int padding;
+
     public void setLabels(List<String> data) {
         mLabels.clear();
         mLabels.addAll(data);
@@ -85,6 +91,7 @@ public class YAxis {
     public YAxis(Context context) {
         mValues = new ArrayList<>();
         mLabels = new ArrayList<>();
+        padding = ChartUtils.dip2px(context, 5);
         mPopHeight = ChartUtils.dip2px(context, 10);
         mPaint = (TextPaint) ChartUtils.initPaint(new TextPaint());
         mPaint.setTextSize(ChartUtils.dip2px(context, 10));
@@ -190,6 +197,14 @@ public class YAxis {
 
     public void setSpace(float space) {
         this.space = space;
+    }
+
+    public int getPadding() {
+        return padding;
+    }
+
+    public void setPadding(int padding) {
+        this.padding = padding;
     }
 
 }

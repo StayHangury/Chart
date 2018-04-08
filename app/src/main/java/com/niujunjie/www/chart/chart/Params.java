@@ -42,6 +42,11 @@ public class Params {
 
 
     /**
+     * 是否显示气泡
+     */
+    private boolean isShowPop = false;
+
+    /**
      * 图表数据
      */
     private Map<Integer, LineData> mChartData = new HashMap<>();
@@ -169,6 +174,14 @@ public class Params {
 
     public void setData(Map<Integer, List<Float>> mData) {
         this.mData = mData;
+    }
+
+    public boolean isShowPop() {
+        return isShowPop;
+    }
+
+    public void setShowPop(boolean showPop) {
+        isShowPop = showPop;
     }
 
     public Paint getBigCirPaint() {

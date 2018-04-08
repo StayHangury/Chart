@@ -66,13 +66,24 @@ public class XAxis {
 
     private float space;
 
+
+    /**
+     * x轴数据显示的开始位置
+     */
+    private int start;
+
+    /**
+     * x轴数据显示的结束位置
+     */
+    private int end;
+
     public XAxis(Context context) {
         mValues = new ArrayList<>();
         mLineValues = new ArrayList<>();
         mLabels = new ArrayList<>();
         mPaint = (TextPaint) ChartUtils.initPaint(new TextPaint());
         mPaint.setTextSize(ChartUtils.dip2px(context, 10));
-        mPaint.setColor(Color.parseColor("#535353"));
+        mPaint.setColor(Color.parseColor("#9e9e9e"));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
             mPaint.setShadowLayer(5, 3, 3, 0x33535353);
         }
@@ -80,7 +91,8 @@ public class XAxis {
     }
 
     public void calcValues(RectF xArea, int start, int end) {
-
+        this.start = start;
+        this.end = end;
 
         /**
          * 按照毫秒值划分x坐标数据
@@ -180,7 +192,19 @@ public class XAxis {
         return mLineValues;
     }
 
-    public void setLineValues(List<Float> mLineValues) {
-        this.mLineValues = mLineValues;
+    public int getEnd() {
+        return end;
+    }
+
+    public void setEnd(int end) {
+        this.end = end;
+    }
+
+    public int getStart() {
+        return start;
+    }
+
+    public void setStart(int start) {
+        this.start = start;
     }
 }
