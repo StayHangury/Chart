@@ -4,7 +4,9 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.drawable.NinePatchDrawable;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -162,6 +164,7 @@ public class LineChart extends BaseChart {
                 lineData.setLineNum(i);
                 lineData.setPosition(j);
                 lineDatas.add(lineData);
+                lineData.setPopValue(currnetValue);
             }
             if (start != end) {
                 mChartDatas.put(i, lineDatas);
@@ -178,27 +181,53 @@ public class LineChart extends BaseChart {
         for (int i = 0; i < mChartDatas.size(); i++) {
             drawSmoothLine(canvas, mChartDatas.get(i), i);
             drawDot(canvas, mChartDatas.get(i), i);
-        }
 
-        if (selectData.size() == mChartDatas.size()) {
-            drawSelecrDot(canvas);
-            if(params.isShowPop()){
-                drawPop(canvas);
+            if (selectData.size() == mChartDatas.size()) {
+                if (params.isShowPop()) {
+                    drawPop(canvas, selectData.get(i), i);
+                }
+                drawSelecrDot(canvas, selectData.get(i), i);
             }
         }
+
 
         /**
          * 在此绘制y轴数据避免显示被遮挡
          */
         drawXValue(canvas, selectData);
-        drawYValue(canvas);
 
+        drawYValue(canvas);
 
 
     }
 
-    private void drawPop(Canvas canvas) {
+    private void drawPop(Canvas canvas, LineData lineData, int lineNum) {
+        float x = lineData.getX() - offset;
+        float y = lineData.getY() - ChartUtils.dip2px(getContext(), 5);
+        Rect popupTextRect = new Rect();
+        String var1;
+        if (mYAxis.getMaxValue() == 20000 || mYAxis.getMaxValue() == 300) {
+            var1 = String.format("%.0f", lineData.getPopValue());
+        } else {
+            var1 = String.format("%.1f", lineData.getPopValue());
+        }
+        params.getPopPaint().getTextBounds(var1, 0, var1.length(), popupTextRect);
 
+        int toPointDistance = ChartUtils.dip2px(getContext(), 14);
+        int paddingRightLeft = ChartUtils.dip2px(getContext(), 5);
+        int left = (int) (x - popupTextRect.width() / 2 - paddingRightLeft);
+        int top = (int) (y - popupTextRect.height()) - toPointDistance;
+        int right = (int) (x + popupTextRect.width() / 2 + paddingRightLeft);
+        int bottom = (int) (y + popupTextRect.height() - toPointDistance);
+
+        Rect r = new Rect(left, top, right, bottom);
+
+        NinePatchDrawable popup = (NinePatchDrawable)
+                getResources().getDrawable(params.getPopBgColors()[lineNum]);
+        popup.setBounds(r);
+        popup.draw(canvas);
+
+        canvas.drawText(var1, x, y - r.height() / 2, params.getPopPaint());
     }
 
     private void drawDot(Canvas canvas, List<LineData> lineData, int lineNum) {
@@ -214,17 +243,15 @@ public class LineChart extends BaseChart {
     }
 
 
-    private void drawSelecrDot(Canvas canvas) {
+    private void drawSelecrDot(Canvas canvas, LineData lineData, int lineNum) {
         float bigRadius = ChartUtils.dip2px(getContext(), 6);
         float smallRadius = ChartUtils.dip2px(getContext(), 4);
 
-        for (int m = 0; m < selectData.size(); m++) {
-            //选中的点放大
-            float x = selectData.get(m).getX();
-            float y = selectData.get(m).getY();
-            canvas.drawCircle(x - offset, y, bigRadius * mClickValue, params.getBigCirPaint());
-            canvas.drawCircle(x - offset, y, smallRadius * mClickValue, params.getSmallCirPaint(m));
-        }
+        //选中的点放大
+        float x = lineData.getX();
+        float y = lineData.getY();
+        canvas.drawCircle(x - offset, y, bigRadius * mClickValue, params.getBigCirPaint());
+        canvas.drawCircle(x - offset, y, smallRadius * mClickValue, params.getSmallCirPaint(lineNum));
     }
 
 

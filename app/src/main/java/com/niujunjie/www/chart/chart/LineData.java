@@ -15,7 +15,7 @@ public class LineData {
     /**
      * 点击是气泡要显示的值
      */
-    private String popValue;
+    private float popValue;
 
 
     /**
@@ -50,11 +50,11 @@ public class LineData {
     }
 
 
-    public String getPopValue() {
+    public float getPopValue() {
         return popValue;
     }
 
-    public void setPopValue(String popValue) {
+    public void setPopValue(float popValue) {
         this.popValue = popValue;
     }
 
@@ -82,7 +82,7 @@ public class LineData {
         return point.y;
     }
 
-    public int getLineNum() {
+    public int getLineNum(){
         return LineNum;
     }
 

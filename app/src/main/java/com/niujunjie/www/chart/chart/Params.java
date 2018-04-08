@@ -4,6 +4,8 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Paint;
 
+import com.niujunjie.www.chart.R;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,8 +46,16 @@ public class Params {
     /**
      * 是否显示气泡
      */
-    private boolean isShowPop = false;
+    private boolean isShowPop = true;
 
+
+
+    /**
+     * 弹出气泡的背景
+     */
+    private int[] popColorArray = {R.drawable.chart_bg_01, R.drawable.chart_bg_02};
+
+    private Paint popPaint;
     /**
      * 图表数据
      */
@@ -196,5 +206,26 @@ public class Params {
             paint.setColor(Color.parseColor(lineColor[i]));
         }
         return paint;
+    }
+
+
+    public Paint getPopPaint() {
+        Paint paint = ChartUtils.initPaint(new Paint());
+        paint.setTextAlign(Paint.Align.CENTER);
+        paint.setTextSize(ChartUtils.dip2px(mContext,14));
+        paint.setColor(Color.parseColor("#535353"));
+        return paint;
+    }
+
+    public void setPopPaint(Paint popPaint){
+        this.popPaint = popPaint;
+    }
+
+    public int[] getPopBgColors() {
+        return popColorArray;
+    }
+
+    public void setPopBgColors(int[] popColorArray) {
+        this.popColorArray = popColorArray;
     }
 }
